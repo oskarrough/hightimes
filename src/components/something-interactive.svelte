@@ -188,7 +188,7 @@
 	<div class="left">
 		<h2>Markt</h2>
 		<p>You have {datamodel.money} moneys.</p>
-		<ProductTable products={datamodel.products} {buy} />
+		<ProductTable {datamodel} {buy} />
 	</div>
 	<div class="right-arrow"></div>
 	<div class="right">

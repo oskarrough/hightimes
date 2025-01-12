@@ -4,7 +4,7 @@
 
 <menu class="Toolbar">
 	{#if !started}
-		<button autofocus disabled={started} onclick={() => loop.start()}>New Game</button>
+		<button autofocus disabled={started} onclick={() => loop.start()}>Play High Times</button>
 	{:else}
 		<button disabled={!started} onclick={() => loop.stop()}>Stop Game</button>
 		<button disabled={!loop.started || paused} onclick={() => loop.pause()}> Pause </button>
@@ -20,7 +20,9 @@
 		left: 0;
 		right: 0;
 		z-index: 1;
-		background: #eee;
+		background: black;
+		color: white;
+		color-scheme: dark;
 		border-bottom: 1px solid #ccc;
 		padding: 0 4px;
 		margin: 0;

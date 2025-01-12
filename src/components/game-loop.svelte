@@ -9,10 +9,16 @@
 	let time = $state(0)
 
 	class MyLoop extends Loop {
+		history = $state([])
+
+		log = (message) => this.history.push({created: new Date().getTime(), message})
+
 		begin() {
 			started = true
+			this.log('begin')
 		}
 		destroy() {
+			this.log('destroy')
 			started = false
 		}
 		$play = () => {
@@ -37,6 +43,18 @@
 
 <Toolbar {loop} {started} {paused} {time} />
 
+<ul class="history">
+	{#each loop.history as record}
+		<li>{record.created}: {record.message}</li>
+	{/each}
+</ul>
+
 {#if started}
 	<SomethingInteractive {loop} />
 {/if}
+
+<style>
+	.history {
+		font-size: 10px;
+	}
+</style>

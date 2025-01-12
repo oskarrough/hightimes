@@ -14,3 +14,12 @@ button,
 input {
 	font-family: inherit;
 }
+
+body {
+	/* space for fixed toolbar */
+	margin: 3rem 1rem 0;
+}
+
+.monospace {
+	font-family: monospace;
+}

@@ -1,8 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro'
-import SomethingInteractive from '../components/something-interactive.svelte'
+import GameLoop from '../components/game-loop.svelte'
 ---
 <Layout>
-	<h1>High times</h1>
-	<SomethingInteractive what="42" client:load />
+	<GameLoop client:load />
 </Layout>

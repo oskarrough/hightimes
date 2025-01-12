@@ -1,37 +1,20 @@
 <script>
 	import {randomFromArray} from '../utils'
 	import ProductTable from './product-table.svelte'
-	import {Loop, Task} from 'vroum'
+	import {Task} from 'vroum'
 
-	let time = $state(0)
-	let messageQueue = [] 
-	let isDisplayingMessage = false 
-	let showAddConsumerPrompt = true
-	
-	const {what} = $props()
-	const datamodel = $state({
+	let {loop} = $props()
+
+	let messageQueue = []
+	let isDisplayingMessage = $state(false)
+	let showAddConsumerPrompt = $state(true)
+	let datamodel = $state({
 		money: 666,
 		inventory: {},
 		consumers: [],
 		currentMessage: null
 	})
 
-	 
-
-	function play() {
-		loop.play()
-		paused = false
-	}
-
-	function pause() {
-		loop.pause()
-		paused = true
-	}
-
-	function clickit() {
-		count = count + 1
-	}
-	
 	// List of possible addictions
 	const addictionPool = ['Cough Syrup', 'Weed', 'Speed', 'LSD', 'Cocaine', 'Meth', 'Crack', 'Heroin']
 
@@ -52,21 +35,19 @@
 	function removeConsumer(consumer) {
 		const index = datamodel.consumers.indexOf(consumer)
 		if (index !== -1) {
-			datamodel.consumers.splice(index, 1) 
-			loop.remove(consumer) 
+			datamodel.consumers.splice(index, 1)
+			loop.remove(consumer)
 			showMessage('WTF - I am out of here!')
 			console.log('Consumer removed:', consumer)
 		}
 	}
 
-	
 	function handleAddConsumerPrompt(accept) {
 		if (accept) {
-			addConsumer(5) 
+			addConsumer(5)
 		}
-		showAddConsumerPrompt = false 
+		showAddConsumerPrompt = false
 	}
-
 
 	function showMessage(text) {
 		messageQueue.push(text)
@@ -82,23 +63,13 @@
 		}
 
 		isDisplayingMessage = true
-		const nextMessage = messageQueue.shift() 
-		datamodel.currentMessage = nextMessage 
+		const nextMessage = messageQueue.shift()
+		datamodel.currentMessage = nextMessage
 
 		setTimeout(() => {
 			datamodel.currentMessage = null
 			processMessageQueue()
 		}, 2000) // Display each message for 2 seconds
-	}
-	
-	class MyLoop extends Loop {
-		begin() {
-			started = true
-		}
-
-		tick() {
-			time = this.Loop.elapsedTime.toFixed(2)
-		}
 	}
 
 	class Consumer extends Task {
@@ -138,11 +109,6 @@
 		}
 	}
 
-	let started = $state(false)
-	let paused = $state(false)
-	let count = $state(Number(what))
-	let loop = MyLoop.new()
-
 	function summarizeAddictions() {
 		const summary = {}
 		datamodel.consumers.forEach((consumer) => {
@@ -153,19 +119,6 @@
 		return Object.entries(summary)
 	}
 </script>
-
-<menu>
-	{#if !started}
-		<button onclick={() => loop.start()}>Start loop</button>
-	{:else if paused}
-		<button onclick={() => play()}>Resume loop</button>
-	{:else}
-		<button onclick={() => pause()}>Pause loop</button>
-	{/if}
-</menu>
-
-
-<p style="font-family: monospace">{time}ms</p>
 
 <button onclick={() => addConsumer(1, ['Weed'])}>Görlitzer Park</button>
 <button onclick={() => addConsumer(3, ['Meth', 'Speed'])}>OstBahnhof</button>
@@ -255,13 +208,13 @@
         position: fixed;
         bottom: 20px;
         left: 20px;
-        background-color: black; 
-        color: lime; 
-        font-family: 'Courier New', Courier, monospace; 
+        background-color: black;
+        color: lime;
+        font-family: 'Courier New', Courier, monospace;
         font-size: 1.2rem;
-        border: 2px solid lime; 
+        border: 2px solid lime;
         padding: 15px;
-        border-radius: 5px; 
+        border-radius: 5px;
         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
         z-index: 1000;
         text-align: center;

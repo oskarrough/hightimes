@@ -10,10 +10,53 @@
 	let showAddConsumerPrompt = $state(true)
 	let datamodel = $state({
 		money: 666,
+		currentMessage: null,
 		inventory: {},
-		consumers: [],
-		currentMessage: null
+		products: [
+			{
+				name: 'Cough Syrup',
+				quantity: 200,
+				price: 5
+			},
+			{
+				name: 'Weed',
+				quantity: 150,
+				price: 15
+			},
+			{
+				name: 'Speed',
+				quantity: 50,
+				price: 25
+			},
+			{
+				name: 'LSD',
+				quantity: 30,
+				price: 50
+			},
+			{
+				name: 'Cocaine',
+				quantity: 20,
+				price: 100
+			},
+			{
+				name: 'Meth',
+				quantity: 15,
+				price: 80
+			},
+			{
+				name: 'Crack',
+				quantity: 20,
+				price: 60
+			},
+			{
+				name: 'Heroin',
+				quantity: 10,
+				price: 120
+			}
+		]
 	})
+
+	let consumers = $state([])
 
 	// List of possible addictions
 	const addictionPool = ['Cough Syrup', 'Weed', 'Speed', 'LSD', 'Cocaine', 'Meth', 'Crack', 'Heroin']
@@ -24,21 +67,22 @@
 		return Array.from({length: numberOfAddictions}, () => randomFromArray(addictionPool))
 	}
 
-	function addConsumer(count = 1, addictions = null) {
+	function addConsumer(count = 1, addictions = randomAddictions()) {
 		for (let i = 0; i < count; i++) {
-			const newConsumer = Consumer.new({addictions: addictions || randomAddictions()}) // Use provided addictions or generate random ones
+			const newConsumer = Consumer.new({addictions})
 			loop.add(newConsumer)
-			datamodel.consumers.push(newConsumer)
 		}
 	}
 
-	function removeConsumer(consumer) {
-		const index = datamodel.consumers.indexOf(consumer)
-		if (index !== -1) {
-			datamodel.consumers.splice(index, 1)
-			loop.remove(consumer)
-			showMessage('WTF - I am out of here!')
-			console.log('Consumer removed:', consumer)
+	function buy(product, quantity) {
+		// pay
+		datamodel.money = datamodel.money - product.price * quantity
+		// update market stock
+		datamodel.products.find(p => p.name === product.name).quantity--
+		// add to inventory
+		datamodel.inventory[product.name] = {
+			quantity: (datamodel.inventory[product.name]?.quantity || 0) + quantity,
+			purchasePrice: product.price
 		}
 	}
 
@@ -75,43 +119,47 @@
 	class Consumer extends Task {
 		duration = 0
 		interval = 3000
-		failedAttempts = 0 // Counter for failed attempts
-
-		constructor({addictions = []} = {}) {
-			super()
-			this.addictions = addictions
-		}
+		failedAttempts = 0
 
 		begin() {
-			console.log('Consumer added with addictions:', this.addictions)
+			consumers = loop.queryAll(Consumer)
+			console.log('Consumer added', this.addictions)
+		}
+
+		destroy() {
+			consumers = loop.queryAll(Consumer)
+			console.log('Consumer removed')
 		}
 
 		tick() {
+			if (this.failedAttempts > 2) {
+				showMessage('WTF - I am out of here!')
+				this.disconnect()
+				return
+			}
 			this.attemptToPurchase()
 		}
 
 		attemptToPurchase() {
 			const productName = randomFromArray(this.addictions)
-			console.log('Attempting to buy:', productName)
+			console.log('Consumer wants', productName)
 
 			const product = datamodel.inventory[productName]
-			if (product?.quantity > 0) {
+
+			if (product?.quantity) {
 				product.quantity -= 1
 				datamodel.money += product.purchasePrice * 2
 				this.failedAttempts = 0 // Reset failed attempts on success
 			} else {
+				showMessage(`${productName} out of stock! Consumer wanted ${this.failedAttempts} time(s).`)
 				this.failedAttempts++
-				showMessage(`${productName} out of stock! Consumer has failed ${this.failedAttempts} time(s).`)
-				if (this.failedAttempts >= 3) {
-					removeConsumer(this)
-				}
 			}
 		}
 	}
 
 	function summarizeAddictions() {
 		const summary = {}
-		datamodel.consumers.forEach((consumer) => {
+		consumers.forEach((consumer) => {
 			consumer.addictions.forEach((addiction) => {
 				summary[addiction] = (summary[addiction] || 0) + 1
 			})
@@ -120,8 +168,9 @@
 	}
 </script>
 
-<button onclick={() => addConsumer(1, ['Weed'])}>Görlitzer Park</button>
-<button onclick={() => addConsumer(3, ['Meth', 'Speed'])}>OstBahnhof</button>
+<h2>Add consumers</h2>
+<button onclick={() => addConsumer(1, ['Weed'])}>Görli</button>
+<button onclick={() => addConsumer(3, ['Meth', 'Speed'])}>Ostbahnhof</button>
 <button onclick={() => addConsumer(3, ['Cocaine'])}>Hauptbahnhof</button>
 <button onclick={() => addConsumer(4, ['LSD', 'Cough Syrup'])}>Technische Universität</button>
 <button onclick={() => addConsumer(4, ['LSD', 'Cocaine', 'Meth'])}>Berghain</button>
@@ -129,14 +178,14 @@
 <!--// Dealer Interactions and weird Proposals-->
 {#if showAddConsumerPrompt}
 	<div class="message-box">
-		<p>Florian: I'm coming to party with 20 friends. You got LSD? </p>
+		<p>Florian: I'm coming to party with 20 friends. You got LSD?</p>
 		<button onclick={() => addConsumer(20, ['LSD'])}>Na Klar bruder</button>
 		<button onclick={() => handleAddConsumerPrompt(false)}>No</button>
 	</div>
 {/if}
 
 <h2>Market</h2>
-<ProductTable {datamodel} />
+<ProductTable products={datamodel.products} {buy} />
 
 <h2>Inventory</h2>
 <h3>Black Money = {datamodel.money}</h3>
@@ -144,21 +193,25 @@
 	<p>{product.quantity}x {name}</p>
 {/each}
 
-<h2>Your Telegram Channel - Members: {datamodel.consumers.length}</h2>
+<h2>Your Telegram Channel - Members: {consumers.length}</h2>
 <div id="message-screen">
 	<div class="messages">
-		{#if datamodel.currentMessage}
-			<div class="message">{datamodel.currentMessage}</div>
-		{:else}
-			<div class="message empty">No messages yet...</div>
-		{/if}
+		<div class={{message: true, empty: !datamodel.currentMessage}}>
+			{datamodel.currentMessage || 'No messages'}
+		</div>
 	</div>
 </div>
 
-<h2>Addiction Trends</h2>
+<h2>Addictions Trends</h2>
 <ul>
 	{#each summarizeAddictions() as [addiction, count]}
 		<li>{addiction}: {count} consumer(s)</li>
+	{/each}
+</ul>
+
+<ul>
+	{#each consumers as consumer}
+		<li>{consumer.addictions}</li>
 	{/each}
 </ul>
 
@@ -205,24 +258,24 @@
 	}
 
 	.message-box {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        background-color: black;
-        color: lime;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 1.2rem;
-        border: 2px solid lime;
-        padding: 15px;
-        border-radius: 5px;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-        z-index: 1000;
-        text-align: center;
-    }
+		position: fixed;
+		bottom: 20px;
+		left: 20px;
+		background-color: black;
+		color: lime;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 1.2rem;
+		border: 2px solid lime;
+		padding: 15px;
+		border-radius: 5px;
+		box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+		z-index: 1000;
+		text-align: center;
+	}
 
-    .message-box p {
-        margin: 0 0 10px;
-    }
+	.message-box p {
+		margin: 0 0 10px;
+	}
 
 	@keyframes fadeout {
 		0% {

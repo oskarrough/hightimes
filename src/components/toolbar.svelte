@@ -4,7 +4,7 @@
 
 <menu class="Toolbar">
 	{#if !started}
-		<button disabled={started} onclick={() => loop.start()}>New Game</button>
+		<button autofocus disabled={started} onclick={() => loop.start()}>New Game</button>
 	{:else}
 		<button disabled={!started} onclick={() => loop.stop()}>Stop Game</button>
 		<button disabled={!loop.started || paused} onclick={() => loop.pause()}> Pause </button>

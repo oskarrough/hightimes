@@ -28,10 +28,10 @@
 		}
 	}
 
-	let loop = $state(MyLoop.new())
+	const loop = MyLoop.new()
 
 	$effect(() => {
-		console.log('child', loop)
+		console.log(loop)
 	})
 </script>
 

@@ -78,7 +78,7 @@
 		// pay
 		datamodel.money = datamodel.money - product.price * quantity
 		// update market stock
-		datamodel.products.find(p => p.name === product.name).quantity--
+		datamodel.products.find((p) => p.name === product.name).quantity--
 		// add to inventory
 		datamodel.inventory[product.name] = {
 			quantity: (datamodel.inventory[product.name]?.quantity || 0) + quantity,
@@ -184,14 +184,22 @@
 	</div>
 {/if}
 
-<h2>Market</h2>
-<ProductTable products={datamodel.products} {buy} />
-
-<h2>Inventory</h2>
-<h3>Black Money = {datamodel.money}</h3>
-{#each Object.entries(datamodel.inventory) as [name, product]}
-	<p>{product.quantity}x {name}</p>
-{/each}
+<div class="split">
+	<div class="left">
+		<h2>Markt</h2>
+		<p>You have {datamodel.money} moneys.</p>
+		<ProductTable products={datamodel.products} {buy} />
+	</div>
+	<div class="right-arrow"></div>
+	<div class="right">
+		<h2>Inventory</h2>
+		<ul>
+			{#each Object.entries(datamodel.inventory) as [name, product]}
+				<li>{product.quantity}x {name}</li>
+			{/each}
+		</ul>
+	</div>
+</div>
 
 <h2>Your Telegram Channel - Members: {consumers.length}</h2>
 <div id="message-screen">
@@ -284,5 +292,27 @@
 		100% {
 			opacity: 0;
 		}
+	}
+
+	.split {
+		display: flex;
+		margin: 1rem 0;
+		gap: 0;
+		align-items: center;
+	}
+
+	.left,
+	.right {
+		flex: 1;
+		border: 1px solid;
+		padding: 0 0.5rem;
+	}
+
+	.right-arrow {
+		width: 0;
+		height: 0;
+		border-top: 1rem solid transparent;
+		border-bottom: 1rem solid transparent;
+		border-left: 1rem solid;
 	}
 </style>

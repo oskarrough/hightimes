@@ -2,6 +2,7 @@
 	import {Loop} from 'vroum'
 	import Toolbar from '../components/toolbar.svelte'
 	import SomethingInteractive from '../components/something-interactive.svelte'
+	import HistoryLog from './history-log.svelte'
 
 	// These are mirrors of the loop's state, but tracked by Svelte, which makes sure the template is always re-rendered.
 	let started = $state(false)
@@ -15,10 +16,10 @@
 
 		begin() {
 			started = true
-			this.log('begin')
+			this.log('Begin')
 		}
 		destroy() {
-			this.log('destroy')
+			this.log('Destroy')
 			started = false
 		}
 		$play = () => {
@@ -43,18 +44,8 @@
 
 <Toolbar {loop} {started} {paused} {time} />
 
-<ul class="history">
-	{#each loop.history as record}
-		<li>{record.created}: {record.message}</li>
-	{/each}
-</ul>
+<HistoryLog {loop} />
 
 {#if started}
 	<SomethingInteractive {loop} />
 {/if}
-
-<style>
-	.history {
-		font-size: 10px;
-	}
-</style>

@@ -3,64 +3,17 @@
 	import ProductTable from './product-table.svelte'
 	import {Task} from 'vroum'
 
-	let {loop} = $props()
+	let {loop = $bindable()} = $props()
 
 	$effect(() => {
-		loop.add(Populator.new())
+		loop.add(Populator.new(), Telegram.new())
 	})
 
-	let messageQueue = []
-	let isDisplayingMessage = $state(false)
 	let showAddConsumerPrompt = $state(true)
-	let money = $state(666)
-	let datamodel = $state({
-		currentMessage: null,
-		inventory: {},
-		market: [
-			{
-				name: 'Cough Syrup',
-				quantity: 200,
-				price: 5
-			},
-			{
-				name: 'Weed',
-				quantity: 150,
-				price: 15
-			},
-			{
-				name: 'Speed',
-				quantity: 50,
-				price: 25
-			},
-			{
-				name: 'LSD',
-				quantity: 30,
-				price: 50
-			},
-			{
-				name: 'Cocaine',
-				quantity: 20,
-				price: 100
-			},
-			{
-				name: 'Meth',
-				quantity: 15,
-				price: 80
-			},
-			{
-				name: 'Crack',
-				quantity: 20,
-				price: 60
-			},
-			{
-				name: 'Heroin',
-				quantity: 10,
-				price: 120
-			}
-		]
-	})
 
 	let consumers = $state([])
+
+	let datamodel = $derived(loop.datamodel)
 
 	/** Available addictions */
 	const addictionPool = ['Cough Syrup', 'Weed', 'Speed', 'LSD', 'Cocaine', 'Meth', 'Crack', 'Heroin']
@@ -91,7 +44,7 @@
 	/** Buy a product from the market */
 	function buy(product, quantity = 1) {
 		// pay
-		money = money - product.price * quantity
+		datamodel.money = datamodel.money - product.price * quantity
 		// update market stock
 		datamodel.market.find((p) => p.name === product.name).quantity--
 		// add to inventory
@@ -115,7 +68,7 @@
 
 		// pay
 		const price = marketPrice(product.purchasePrice)
-		money += price
+		datamodel.money += price
 		// update inventory stock
 		product.quantity -= quantity
 		loop.log(`Sold ${quantity}x ${productName} for ${price}`)
@@ -129,33 +82,20 @@
 		return normalPrice * 2
 	}
 
-	function showMessage(text) {
-		messageQueue.push(text)
-		if (!isDisplayingMessage) {
-			processMessageQueue()
+	class Telegram extends Task {
+		interval = 10000
+
+		tick() {
+			if (datamodel.messages.length > 1) {
+				datamodel.messages.shift()
+			}
 		}
-	}
-
-	function processMessageQueue() {
-		if (messageQueue.length === 0) {
-			isDisplayingMessage = false
-			return
-		}
-
-		isDisplayingMessage = true
-		const nextMessage = messageQueue.shift()
-		datamodel.currentMessage = nextMessage
-
-		setTimeout(() => {
-			datamodel.currentMessage = null
-			processMessageQueue()
-		}, 2000) // Display each message for 2 seconds
 	}
 
 	/** Represents someone looking to buy products */
 	class Consumer extends Task {
 		duration = 0
-		interval = 4000
+		interval = 6000
 		failedAttempts = 0
 
 		addictions = []
@@ -172,7 +112,7 @@
 
 		tick() {
 			if (this.failedAttempts > 2) {
-				showMessage('WTF - I am out of here!')
+				datamodel.messages.push('WTF - I am out of here!')
 				this.disconnect()
 				return
 			}
@@ -191,7 +131,7 @@
 			} else {
 				this.failedAttempts++
 				this.Loop.log(`Consumer failed to purchase ${amount} of ${productName}. ${inStock} available`)
-				showMessage(`${productName} out of stock! Consumer failed ${this.failedAttempts} time(s).`)
+				datamodel.messages.push(`${productName} out of stock! Consumer failed ${this.failedAttempts} time(s).`)
 			}
 		}
 	}
@@ -207,14 +147,6 @@
 	}
 </script>
 
-<menu>
-	<button onclick={() => addConsumer(1, ['Weed'])}>Görli</button>
-	<button onclick={() => addConsumer(3, ['Meth', 'Speed'])}>Ostbahnhof</button>
-	<button onclick={() => addConsumer(3, ['Cocaine'])}>Hauptbahnhof</button>
-	<button onclick={() => addConsumer(4, ['LSD', 'Cough Syrup'])}>Technische Universität</button>
-	<button onclick={() => addConsumer(4, ['LSD', 'Cocaine', 'Meth'])}>Berghain</button>
-</menu>
-
 <!--// Dealer Interactions and weird Proposals-->
 {#if showAddConsumerPrompt}
 	<div class="message-box">
@@ -226,65 +158,99 @@
 
 <div class="split">
 	<div class="left">
-		<h2>Markt</h2>
-		<p>You have {money} moneys.</p>
-		<ProductTable products={datamodel.market} {money} {buy} />
+		<div class="box">
+			<header>
+				<h2>Markt</h2>
+			</header>
+			<main>
+				<ProductTable products={datamodel.market} money={datamodel.money} {buy} />
+			</main>
+		</div>
 	</div>
 	<div class="right-arrow"></div>
 	<div class="right">
-		<h2>Inventory</h2>
-		<ul class="list">
-			{#each Object.entries(datamodel.inventory) as [name, product]}
-				<li>{product.quantity}x {name}</li>
-			{/each}
-		</ul>
+		<div class="box">
+			<header>
+				<h2>Inventory</h2>
+			</header>
+			<main>
+				<ul class="list">
+					{#each Object.entries(datamodel.inventory) as [name, product]}
+						<li>{product.quantity}x {name}</li>
+					{/each}
+				</ul>
+			</main>
+		</div>
 	</div>
 </div>
 
-<section>
-	<div id="message-screen">
-		<h2>Telegram ({consumers.length} members)</h2>
-		<div class="messages">
-			<div class={{message: true, empty: !datamodel.currentMessage}}>
-				{datamodel.currentMessage || 'No messages'}
-			</div>
-		</div>
-	</div>
+<div class="box">
+	<header><h2>Kiez030_Advertizing</h2></header>
+	<main>
+		<menu>
+			<button onclick={() => addConsumer(1, ['Weed'])}>Görli</button>
+			<button onclick={() => addConsumer(3, ['Meth', 'Speed'])}>Ostbahnhof</button>
+			<button onclick={() => addConsumer(3, ['Cocaine'])}>Hauptbahnhof</button>
+			<button onclick={() => addConsumer(4, ['LSD', 'Cough Syrup'])}>Technische Universität</button>
+			<button onclick={() => addConsumer(4, ['LSD', 'Cocaine', 'Meth'])}>Berghain</button>
+		</menu>
+	</main>
+</div>
 
-	<h2>Addictions Trends</h2>
-	<ul class="list">
-		{#each summarizeAddictions() as [addiction, count]}
-			<li>{addiction}: {count} consumer(s)</li>
-		{/each}
-	</ul>
+<section>
+	<div class="box">
+		<header>
+			<h2>Telegram ({consumers.length} members)</h2>
+		</header>
+		<main class="">
+			<ul class="list" style="max-width: 15em">
+				{#each summarizeAddictions() as [addiction, count]}
+					<li>{addiction}: {count} consumer(s)</li>
+				{/each}
+			</ul>
+			<div class="messages">
+				<div class={{message: true, empty: !datamodel.currentMessage}}>
+					<!-- {datamodel.messages.at(-1) || 'No new messages'} -->
+				</div>
+			</div>
+		</main>
+		<marquee>{datamodel.messages.join(', ')}</marquee>
+	</div>
 </section>
 
-<section>
+<!-- <section>
 	<h2>Consumers</h2>
 	<ul class="list">
 		{#each consumers as consumer}
 			<li>{consumer.addictions}</li>
 		{/each}
 	</ul>
-</section>
+</section> -->
 
 <style>
-	#message-screen {
-		height: 200px;
+	.box {
+		margin: 1em 0;
 		border: 1px solid;
-		padding: 0 1rem;
-		background-color: #e6e6e6;
+		background-color: #faf9f9;
+	}
+	.box main {
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
-		overflow: hidden;
-		position: relative;
-		margin-left: 0;
+		align-items: flex-start;
+		padding: 0 1rem;
+	}
+	.box main.horizontal {
+		flex-direction: row;
+	}
+	.box header h2 {
+		margin: 0;
+		padding: 0 0.1rem;
+		border-bottom: 1px solid;
 	}
 
 	.messages {
 		flex: 1;
-		padding: 10px;
+		padding: 1rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -292,9 +258,7 @@
 
 	.message {
 		background-color: white;
-		padding: 10px;
-		box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-		font-size: 1rem;
+		padding: 1rem;
 		text-align: center;
 	}
 

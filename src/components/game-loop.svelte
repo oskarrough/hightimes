@@ -12,6 +12,55 @@
 	class MyLoop extends Loop {
 		history = $state([])
 
+		datamodel = $state({
+			money: 666,
+			messages: [],
+			currentMessage: null,
+			inventory: {},
+			market: [
+				{
+					name: 'Cough Syrup',
+					quantity: 200,
+					price: 5
+				},
+				{
+					name: 'Weed',
+					quantity: 150,
+					price: 15
+				},
+				{
+					name: 'Speed',
+					quantity: 50,
+					price: 25
+				},
+				{
+					name: 'LSD',
+					quantity: 30,
+					price: 50
+				},
+				{
+					name: 'Cocaine',
+					quantity: 20,
+					price: 100
+				},
+				{
+					name: 'Meth',
+					quantity: 15,
+					price: 80
+				},
+				{
+					name: 'Crack',
+					quantity: 20,
+					price: 60
+				},
+				{
+					name: 'Heroin',
+					quantity: 10,
+					price: 120
+				}
+			]
+		})
+
 		log = (message) => this.history.push({created: new Date().getTime(), message})
 
 		begin() {
@@ -37,16 +86,12 @@
 		}
 	}
 
-	const loop = MyLoop.new()
-
-	$effect(() => {
-		console.log(loop)
-	})
+	let loop = $state(MyLoop.new())
 </script>
 
 <Toolbar {loop} {started} {paused} {time} />
 
 {#if started}
 	<SomethingInteractive {loop} />
-	<HistoryLog {loop} />
+	<HistoryLog bind:loop />
 {/if}

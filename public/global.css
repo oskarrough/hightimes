@@ -55,16 +55,25 @@ ul {
 }
 
 .list {
+	width: 100%;
 	list-style: none;
 	border: 1px solid;
 	padding: 0;
 	font-size: 14px;
+
+	.box & {
+		border-color: transparent;
+	}
 }
 
 .list:empty {
 	border-color: transparent;
 }
 
-.list li:nth-child(even) {
+.list li:nth-child(odd) {
 	background-color: #eee;
+}
+
+p + .list {
+	margin-top: 0;
 }

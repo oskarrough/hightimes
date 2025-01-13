@@ -9,7 +9,7 @@
 		<button disabled={!started} onclick={() => loop.stop()}>Stop Game</button>
 		<button disabled={!loop.started || paused} onclick={() => loop.pause()}> Pause </button>
 		<button disabled={!paused} onclick={() => loop.play()}> Resume </button>
-		<span class="monospace">{time.toFixed(2)}ms</span>
+		<span class="monospace">﹩{loop.datamodel.money} ⏱{time.toFixed(2)}ms</span>
 	{/if}
 </menu>
 

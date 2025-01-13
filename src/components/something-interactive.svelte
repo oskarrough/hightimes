@@ -34,19 +34,29 @@
 		return Object.entries(summary)
 	}
 
+	function randomBetween(min, max) {
+		return Math.floor(Math.random() * (max - min + 1) + min)
+	}
+
 	function addConsumer(count = 1, addictions = randomAddictions()) {
 		for (let i = 0; i < count; i++) {
-			const newConsumer = Consumer.new({addictions})
+			const newConsumer = Consumer.new({delay: randomBetween(100, 2000), addictions})
 			loop.add(newConsumer)
 		}
 	}
 
 	/** Buy a product from the market */
 	function buy(product, quantity = 1) {
+		const inStock = datamodel.market.find((p) => p.name === product.name).quantity
+
+		if (!inStock) {
+			alert('Out of stock')
+			return
+		}
 		// pay
 		datamodel.money = datamodel.money - product.price * quantity
 		// update market stock
-		datamodel.market.find((p) => p.name === product.name).quantity--
+		datamodel.market.find((p) => p.name === product.name).quantity = inStock - quantity
 		// add to inventory
 		const purchasePrice = product.price * quantity
 		datamodel.inventory[product.name] = {
@@ -124,7 +134,6 @@
 			const productName = randomFromArray(this.addictions)
 			const inStock = datamodel.inventory[productName]?.quantity || 0
 			if (inStock) {
-				console.log('in stock', productName, inStock)
 				sell(productName, amount)
 				this.failedAttempts = 0
 				this.Loop.log(`Consumer purchased ${amount} ${productName}`)
@@ -145,6 +154,10 @@
 			addConsumer(1, randomAddictions())
 		}
 	}
+
+	let x = $derived(
+		loop.history.filter((msg) => msg.message.includes('failed to purchase')).map((x) => x.message).length
+	)
 </script>
 
 <!--// Dealer Interactions and weird Proposals-->
@@ -184,15 +197,19 @@
 	</div>
 </div>
 
+{#snippet advertise(kiez, amount, addictions, cost)}
+	<button disabled={datamodel.money < cost} onclick={() => addConsumer(amount, addictions)}>{kiez} {cost}﹩</button>
+{/snippet}
+
 <div class="box">
 	<header><h2>Kiez030_Advertizing</h2></header>
 	<main>
 		<menu>
-			<button onclick={() => addConsumer(1, ['Weed'])}>Görli</button>
-			<button onclick={() => addConsumer(3, ['Meth', 'Speed'])}>Ostbahnhof</button>
-			<button onclick={() => addConsumer(3, ['Cocaine'])}>Hauptbahnhof</button>
-			<button onclick={() => addConsumer(4, ['LSD', 'Cough Syrup'])}>Technische Universität</button>
-			<button onclick={() => addConsumer(4, ['LSD', 'Cocaine', 'Meth'])}>Berghain</button>
+			{@render advertise('Görli', 1, ['Weed'], 20)}
+			{@render advertise('Ostbahnhof', 3, ['Meth', 'Speed'], 60)}
+			{@render advertise('Hauptbahnhof', 3, ['Cocaine'], 70)}
+			{@render advertise('Technische Universität', 4, ['LSD', 'Cough Syrup'], 70)}
+			{@render advertise('Berghain', 4, ['LSD', 'Cocaine', 'Meth'], 200)}
 		</menu>
 	</main>
 </div>
@@ -214,9 +231,12 @@
 				</div>
 			</div>
 		</main>
+		<!-- svelte-ignore a11y_distracting_elements -->
 		<marquee>{datamodel.messages.join(', ')}</marquee>
 	</div>
 </section>
+
+<p>You've missed out on {x} orders.</p>
 
 <!-- <section>
 	<h2>Consumers</h2>
@@ -238,9 +258,6 @@
 		flex-direction: column;
 		align-items: flex-start;
 		padding: 0 1rem;
-	}
-	.box main.horizontal {
-		flex-direction: row;
 	}
 	.box header h2 {
 		margin: 0;
@@ -272,7 +289,7 @@
 	.message-box {
 		position: fixed;
 		bottom: 20px;
-		left: 20px;
+		right: 20px;
 		background-color: black;
 		color: lime;
 		font-family: 'Courier New', Courier, monospace;
@@ -283,6 +300,7 @@
 		box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
 		z-index: 1000;
 		text-align: center;
+		max-width: 30rem;
 	}
 
 	.message-box p {

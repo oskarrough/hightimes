@@ -4,12 +4,12 @@
 
 <menu class="Toolbar">
 	{#if !started}
-		<button autofocus disabled={started} onclick={() => loop.start()}>Play High Times</button>
+		<button disabled={started} onclick={() => loop.start()}>Play High Times</button>
 	{:else}
 		<button disabled={!started} onclick={() => loop.stop()}>Stop Game</button>
 		<button disabled={!loop.started || paused} onclick={() => loop.pause()}> Pause </button>
 		<button disabled={!paused} onclick={() => loop.play()}> Resume </button>
-		<span class="monospace">﹩{loop.datamodel.money} ⏱{time.toFixed(2)}ms</span>
+		<span class="monospace">﹩{loop.datamodel.money} ⏱{(time/1000).toFixed(1)}ms</span>
 	{/if}
 </menu>
 

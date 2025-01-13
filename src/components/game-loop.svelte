@@ -20,12 +20,12 @@
 			market: [
 				{
 					name: 'Cough Syrup',
-					quantity: 200,
+					quantity: 80,
 					price: 5
 				},
 				{
 					name: 'Weed',
-					quantity: 150,
+					quantity: 60,
 					price: 15
 				},
 				{
@@ -83,15 +83,28 @@
 			// by 1) updating local component state every tick and 2) rendering {time} in the template,
 			// we ensure that the component is re-rendered every tick
 			time = this.Loop.elapsedTime
+			this.checkWinCondition()
+		}
+
+		/** You win if the datamodel.market is completely out of stock. */
+		checkWinCondition() {
+			if (this.datamodel.market.every((product) => product.quantity === 0)) {
+				this.log(`You win! ${this.datamodel.money}﹩ in ${(this.Loop.elapsedTime / 1000).toFixed(1)}s`)
+				this.pause()
+			}
 		}
 	}
 
 	let loop = $state(MyLoop.new())
+
+	$effect(() => {
+		window.oskar = loop
+	})
 </script>
 
 <Toolbar {loop} {started} {paused} {time} />
 
 {#if started}
-	<SomethingInteractive {loop} />
+	<SomethingInteractive bind:loop />
 	<HistoryLog bind:loop />
 {/if}

@@ -13,6 +13,7 @@
 		history = $state([])
 
 		datamodel = $state({
+			gameover: false,
 			money: 666,
 			messages: [],
 			currentMessage: null,
@@ -90,6 +91,7 @@
 		checkWinCondition() {
 			if (this.datamodel.market.every((product) => product.quantity === 0)) {
 				this.log(`You win! ${this.datamodel.money}﹩ in ${(this.Loop.elapsedTime / 1000).toFixed(1)}s`)
+				this.datamode.gameover = true
 				this.pause()
 			}
 		}

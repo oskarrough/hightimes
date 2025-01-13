@@ -160,6 +160,17 @@
 	)
 </script>
 
+{#if datamodel.gameover}
+	<div class="box">
+		<header>
+			<h2>Game Over</h2>
+		</header>
+		<main>
+			<p>{datamodel.money}﹩ in {(loop.elapsedTime / 1000).toFixed(1)}s</p>
+		</main>
+	</div>
+{/if}
+
 <!--// Dealer Interactions and weird Proposals-->
 {#if showAddConsumerPrompt}
 	<div class="message-box">

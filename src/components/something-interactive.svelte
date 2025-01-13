@@ -78,7 +78,7 @@
 		}
 	}
 
-	function buy(product, quantity) {
+	function buy(product, quantity = 1) {
 		// pay
 		money = money - product.price * quantity
 		// update market stock
@@ -89,6 +89,23 @@
 			purchasePrice: product.price
 		}
 		loop.log(`Bought ${quantity}x ${product.name}`)
+	}
+
+	function marketPrice(normalPrice) {
+		// for now market price is hardcoded to double, but we can imagine a more complex formula,
+		// fluctuation, individual prices per product etc.
+		return normalPrice * 2
+	}
+
+	function sell(product, quantity = 1) {
+		if (!product || product?.quantity < quantity) {
+			loop.log('Not enough stock')
+			return
+		}
+		// pay
+		money += marketPrice(product.purchasePrice)
+		// update market stock
+		product.quantity -= quantity
 	}
 
 	function handleAddConsumerPrompt(accept) {
@@ -121,10 +138,13 @@
 		}, 2000) // Display each message for 2 seconds
 	}
 
+	/** Represents someone looking to buy products */
 	class Consumer extends Task {
 		duration = 0
 		interval = 3000
 		failedAttempts = 0
+
+		addictions = []
 
 		begin() {
 			consumers = loop.queryAll(Consumer)
@@ -145,26 +165,27 @@
 			this.attemptToPurchase()
 		}
 
-		attemptToPurchase() {
+		attemptToPurchase(amount = 1) {
 			const productName = randomFromArray(this.addictions)
 			const product = datamodel.inventory[productName]
-			if (product?.quantity) {
-				product.quantity -= 1
-				money += product.purchasePrice * 2
-				this.failedAttempts = 0 // Reset failed attempts on success
-				this.Loop.log(`Consumer purchased 1 ${productName}`)
-			} else {
-				this.Loop.log(`Consumer failed to purchase 1 ${productName}`)
-				showMessage(`${productName} out of stock! Consumer wanted ${this.failedAttempts} time(s).`)
+
+			if (product?.quantity < amount) {
 				this.failedAttempts++
+				showMessage(`${productName} out of stock! Consumer wanted ${this.failedAttempts} time(s).`)
+				return
 			}
+
+			this.failedAttempts = 0 // Reset failed attempts on success
+			this.Loop.log(`Consumer purchased ${amount} ${productName}`)
+			sell(product, amount)
 		}
 	}
 
+	/** Tasks that continously adds a random consumer */
 	class Populator extends Task {
 		delay = 600
 		duration = 0
-		interval = 2400
+		interval = 6400
 
 		tick() {
 			addConsumer()

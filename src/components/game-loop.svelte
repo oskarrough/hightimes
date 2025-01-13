@@ -22,12 +22,14 @@
 			this.log('Destroy')
 			started = false
 		}
+
 		$play = () => {
 			paused = false
 		}
 		$pause = () => {
 			paused = true
 		}
+
 		tick() {
 			// by 1) updating local component state every tick and 2) rendering {time} in the template,
 			// we ensure that the component is re-rendered every tick
@@ -44,8 +46,7 @@
 
 <Toolbar {loop} {started} {paused} {time} />
 
-<HistoryLog {loop} />
-
 {#if started}
 	<SomethingInteractive {loop} />
+	<HistoryLog {loop} />
 {/if}

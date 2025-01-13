@@ -5,6 +5,10 @@
 
 	let {loop} = $props()
 
+	$effect(() => {
+		loop.add(Populator.new())
+	})
+
 	let messageQueue = []
 	let isDisplayingMessage = $state(false)
 	let showAddConsumerPrompt = $state(true)
@@ -12,7 +16,7 @@
 	let datamodel = $state({
 		currentMessage: null,
 		inventory: {},
-		products: [
+		market: [
 			{
 				name: 'Cough Syrup',
 				quantity: 200,
@@ -56,10 +60,6 @@
 		]
 	})
 
-	$effect(() => {
-		loop.add(Populator.new())
-	})
-
 	let consumers = $state([])
 
 	/** Available addictions */
@@ -71,6 +71,16 @@
 		return Array.from({length: numberOfAddictions}, () => randomFromArray(addictionPool))
 	}
 
+	function summarizeAddictions() {
+		const summary = {}
+		consumers.forEach((consumer) => {
+			consumer.addictions.forEach((addiction) => {
+				summary[addiction] = (summary[addiction] || 0) + 1
+			})
+		})
+		return Object.entries(summary)
+	}
+
 	function addConsumer(count = 1, addictions = randomAddictions()) {
 		for (let i = 0; i < count; i++) {
 			const newConsumer = Consumer.new({addictions})
@@ -78,41 +88,45 @@
 		}
 	}
 
+	/** Buy a product from the market */
 	function buy(product, quantity = 1) {
 		// pay
 		money = money - product.price * quantity
 		// update market stock
-		datamodel.products.find((p) => p.name === product.name).quantity--
+		datamodel.market.find((p) => p.name === product.name).quantity--
 		// add to inventory
+		const purchasePrice = product.price * quantity
 		datamodel.inventory[product.name] = {
-			quantity: (datamodel.inventory[product.name]?.quantity || 0) + quantity,
-			purchasePrice: product.price
+			purchasePrice,
+			quantity: (datamodel.inventory[product.name]?.quantity || 0) + quantity
 		}
-		loop.log(`Bought ${quantity}x ${product.name}`)
+		loop.log(`Bought ${quantity}x ${product.name} for ${purchasePrice}`)
 	}
 
-	function marketPrice(normalPrice) {
-		// for now market price is hardcoded to double, but we can imagine a more complex formula,
-		// fluctuation, individual prices per product etc.
-		return normalPrice * 2
-	}
-
-	function sell(product, quantity = 1) {
-		if (!product || product?.quantity < quantity) {
-			loop.log('Not enough stock')
+	/** Sell a product from the inventory */
+	function sell(productName, quantity = 1) {
+		const inStock = datamodel.inventory[productName]?.quantity || 0
+		if (!inStock) {
+			this.Loop.log(`${productName} out of stock`)
 			return
 		}
+
+		const product = datamodel.inventory[productName]
+
 		// pay
-		money += marketPrice(product.purchasePrice)
-		// update market stock
+		const price = marketPrice(product.purchasePrice)
+		money += price
+		// update inventory stock
 		product.quantity -= quantity
+		loop.log(`Sold ${quantity}x ${productName} for ${price}`)
 	}
 
-	function handleAddConsumerPrompt(accept) {
-		if (accept) {
-			addConsumer(5)
-		}
-		showAddConsumerPrompt = false
+	/**
+	 * For now market price is hardcoded to double, but we can imagine a more complex formula, fluctuation, individual prices per product etc.
+	 * @param normalPrice
+	 */
+	function marketPrice(normalPrice) {
+		return normalPrice * 2
 	}
 
 	function showMessage(text) {
@@ -141,19 +155,19 @@
 	/** Represents someone looking to buy products */
 	class Consumer extends Task {
 		duration = 0
-		interval = 3000
+		interval = 4000
 		failedAttempts = 0
 
 		addictions = []
 
 		begin() {
-			consumers = loop.queryAll(Consumer)
 			this.Loop.log('Consumer added', this.addictions)
+			consumers = loop.queryAll(Consumer)
 		}
 
 		destroy() {
-			consumers = loop.queryAll(Consumer)
 			this.Loop.log('Consumer removed')
+			consumers = loop.queryAll(Consumer)
 		}
 
 		tick() {
@@ -162,44 +176,34 @@
 				this.disconnect()
 				return
 			}
+
 			this.attemptToPurchase()
 		}
 
 		attemptToPurchase(amount = 1) {
 			const productName = randomFromArray(this.addictions)
-			const product = datamodel.inventory[productName]
-
-			if (product?.quantity < amount) {
+			const inStock = datamodel.inventory[productName]?.quantity || 0
+			if (inStock) {
+				console.log('in stock', productName, inStock)
+				sell(productName, amount)
+				this.failedAttempts = 0
+				this.Loop.log(`Consumer purchased ${amount} ${productName}`)
+			} else {
 				this.failedAttempts++
-				showMessage(`${productName} out of stock! Consumer wanted ${this.failedAttempts} time(s).`)
-				return
+				this.Loop.log(`Consumer failed to purchase ${amount} of ${productName}. ${inStock} available`)
+				showMessage(`${productName} out of stock! Consumer failed ${this.failedAttempts} time(s).`)
 			}
-
-			this.failedAttempts = 0 // Reset failed attempts on success
-			this.Loop.log(`Consumer purchased ${amount} ${productName}`)
-			sell(product, amount)
 		}
 	}
 
-	/** Tasks that continously adds a random consumer */
 	class Populator extends Task {
 		delay = 600
 		duration = 0
-		interval = 6400
+		interval = 10000
 
 		tick() {
-			addConsumer()
+			addConsumer(1, randomAddictions())
 		}
-	}
-
-	function summarizeAddictions() {
-		const summary = {}
-		consumers.forEach((consumer) => {
-			consumer.addictions.forEach((addiction) => {
-				summary[addiction] = (summary[addiction] || 0) + 1
-			})
-		})
-		return Object.entries(summary)
 	}
 </script>
 
@@ -216,7 +220,7 @@
 	<div class="message-box">
 		<p>Florian: I'm coming to party with 20 friends. Got LSD?</p>
 		<button onclick={() => addConsumer(20, ['LSD'])}>Na klar bruder</button>
-		<button onclick={() => handleAddConsumerPrompt(false)}>Naah</button>
+		<button onclick={() => (showAddConsumerPrompt = false)}>Naah</button>
 	</div>
 {/if}
 
@@ -224,12 +228,12 @@
 	<div class="left">
 		<h2>Markt</h2>
 		<p>You have {money} moneys.</p>
-		<ProductTable products={datamodel.products} {money} {buy} />
+		<ProductTable products={datamodel.market} {money} {buy} />
 	</div>
 	<div class="right-arrow"></div>
 	<div class="right">
 		<h2>Inventory</h2>
-		<ul>
+		<ul class="list">
 			{#each Object.entries(datamodel.inventory) as [name, product]}
 				<li>{product.quantity}x {name}</li>
 			{/each}
@@ -238,8 +242,8 @@
 </div>
 
 <section>
-	<h2>Telegram ({consumers.length} members)</h2>
 	<div id="message-screen">
+		<h2>Telegram ({consumers.length} members)</h2>
 		<div class="messages">
 			<div class={{message: true, empty: !datamodel.currentMessage}}>
 				{datamodel.currentMessage || 'No messages'}
@@ -248,7 +252,7 @@
 	</div>
 
 	<h2>Addictions Trends</h2>
-	<ul>
+	<ul class="list">
 		{#each summarizeAddictions() as [addiction, count]}
 			<li>{addiction}: {count} consumer(s)</li>
 		{/each}
@@ -257,7 +261,7 @@
 
 <section>
 	<h2>Consumers</h2>
-	<ul>
+	<ul class="list">
 		{#each consumers as consumer}
 			<li>{consumer.addictions}</li>
 		{/each}
@@ -266,12 +270,10 @@
 
 <style>
 	#message-screen {
-		width: 300px;
 		height: 200px;
-		border: 2px solid #333;
-		border-radius: 20px;
+		border: 1px solid;
+		padding: 0 1rem;
 		background-color: #e6e6e6;
-		box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
@@ -291,14 +293,13 @@
 	.message {
 		background-color: white;
 		padding: 10px;
-		border-radius: 10px;
 		box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
 		font-size: 1rem;
 		text-align: center;
 	}
 
 	.message.empty {
-		color: #999;
+		color: #333;
 		background: none;
 		box-shadow: none;
 		font-style: italic;

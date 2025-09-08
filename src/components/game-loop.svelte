@@ -97,7 +97,7 @@
 		}
 	}
 
-	let loop = $state(MyLoop.new())
+	let loop = $state(new MyLoop())
 
 	$effect(() => {
 		window.oskar = loop

@@ -10,9 +10,7 @@
 	})
 
 	let showAddConsumerPrompt = $state(true)
-
 	let consumers = $state([])
-
 	let datamodel = $derived(loop.datamodel)
 
 	/** Available addictions */

@@ -9,13 +9,13 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/svelte": "^7.0.3",
+    "@astrojs/svelte": "7.1.0",
     "@webreflection/x": "^0.2.22",
-    "astro": "^5.1.6",
-    "vroum": "^0.6.12"
+    "astro": "5.9.1",
+    "vroum": "^1.2.2"
   },
   "devDependencies": {
-    "prettier": "^3.4.2",
-    "prettier-plugin-svelte": "^3.3.3"
+    "prettier": "^3.5.3",
+    "prettier-plugin-svelte": "^3.4.0"
   }
 }
